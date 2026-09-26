@@ -30,12 +30,20 @@ jobs:
         run: |
           npm ci
           npm run build
+          test -f dist/index.html
+
+      - name: Prepare deploy package
+        run: |
+          mkdir -p deploy
+          cp -R dist/. deploy/
+          ls -la deploy
+          test -f deploy/index.html
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: node-app
-          path: dist
+          path: deploy
 
   deploy:
     runs-on: ubuntu-latest
@@ -46,6 +54,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: node-app
+          path: ./deploy
+
+      - name: Verify package contents
+        run: |
+          ls -la ./deploy
+          test -f ./deploy/index.html
 
       - name: 'Deploy to Azure Web App'
         id: deploy-to-webapp
@@ -53,5 +67,5 @@ jobs:
         with:
           app-name: 'hse-app-service-frontend'
           slot-name: 'Production'
-          package: .
+          package: ./deploy
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_E11AEE30AD91445195BDDD622C147E3B }}
