@@ -34,10 +34,14 @@ jobs:
 
       - name: Prepare deploy package
         run: |
-          mkdir -p deploy
-          cp -R dist/. deploy/
+          mkdir -p deploy/dist
+          cp -R dist/. deploy/dist/
+          cp server.js deploy/server.js
+          cp azure-package.json deploy/package.json
           ls -la deploy
-          test -f deploy/index.html
+          test -f deploy/dist/index.html
+          test -f deploy/server.js
+          test -f deploy/package.json
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
@@ -59,7 +63,9 @@ jobs:
       - name: Verify package contents
         run: |
           ls -la ./deploy
-          test -f ./deploy/index.html
+          test -f ./deploy/dist/index.html
+          test -f ./deploy/server.js
+          test -f ./deploy/package.json
 
       - name: 'Deploy to Azure Web App'
         id: deploy-to-webapp
@@ -68,4 +74,5 @@ jobs:
           app-name: 'hse-app-service-frontend'
           slot-name: 'Production'
           package: ./deploy
+          startup-command: node server.js
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_E11AEE30AD91445195BDDD622C147E3B }}
