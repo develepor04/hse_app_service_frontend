@@ -74,5 +74,4 @@ jobs:
           app-name: 'hse-app-service-frontend'
           slot-name: 'Production'
           package: ./deploy
-          startup-command: node server.js
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_E11AEE30AD91445195BDDD622C147E3B }}
