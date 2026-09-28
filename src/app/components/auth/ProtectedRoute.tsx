@@ -5,6 +5,20 @@ import { useAuth } from "../../context/AuthContext";
 import type { ReactNode } from "react";
 import type { UiModuleLabel } from "../../context/AuthContext";
 
+/** Organisation id from the login JWT. `undefined` means there is no token to read. */
+function readJwtOrgId(): number | null | undefined {
+  const token = localStorage.getItem("hse_jwt_token");
+  if (!token) return undefined;
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1])) as { org_id?: number | null };
+    if (payload.org_id == null) return null;
+    const orgId = Number(payload.org_id);
+    return Number.isFinite(orgId) ? orgId : null;
+  } catch {
+    return undefined;
+  }
+}
+
 export function ProtectedRoute({
   children,
   requiredModule,
@@ -36,9 +50,15 @@ export function ProtectedRoute({
   void hideForOnboardingScoped;
 
   const setupRequired = Boolean(user?.onboardingSetupRequired && !user?.onboardingSetupCompleted);
-  // Allow one landing on dashboard to show onboarding setup prompt after login.
-  // All other pages remain gated until setup is completed.
-  if (setupRequired && location.pathname !== "/org-setup-wizard") {
+  // Login writes organisation_id into the JWT. Null means wizard step 1 never
+  // linked this admin, and Data Management would otherwise POST organisation_id=-1.
+  // Superadmin is platform-scoped and is left on /superadmin.
+  const orgId = readJwtOrgId();
+  // Step 8 sets onboardingSetupCompleted before leaving the wizard. The JWT
+  // still carries a null org_id until the next login, but the API reads the
+  // organisation from the user row, which step 1 has already filled in.
+  const adminMissingOrg = user?.role === "Admin" && !user?.isSuperAdmin && !user?.onboardingSetupCompleted && orgId !== undefined && (orgId == null || orgId < 1);
+  if ((setupRequired || adminMissingOrg) && location.pathname !== "/org-setup-wizard") {
     return <Navigate to="/org-setup-wizard" replace />;
   }
 
